@@ -1,0 +1,88 @@
+:root {
+  /* Scale AI Inspired Colors */
+  --color-bg: #020202;
+  /* Deepest Black */
+  --color-primary: #FFFFFF;
+  /* High Contrast White */
+  --color-text: #E5E5E5;
+  /* Slightly off-white for body */
+  --color-text-dim: #A1A1AA;
+  /* Muted gray */
+
+  --color-accent: #3b82f6;
+  /* Electric Blue for accents */
+  --color-accent-glow: rgba(59, 130, 246, 0.5);
+
+  --color-border: #1F1F1F;
+  /* Subtle grid borders */
+  --color-surface: #0A0A0A;
+  /* Slightly lighter black for cards */
+
+  /* Gradients */
+  --gradient-text: linear-gradient(135deg, #FFFFFF 0%, #A1A1AA 100%);
+  --gradient-glow: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
+
+  /* Spacing */
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 2rem;
+  --spacing-xl: 4rem;
+  --spacing-2xl: 8rem;
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--color-primary);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+
+p {
+  color: var(--color-text-dim);
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+a:hover {
+  opacity: 0.8;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* Utilities */
+.text-gradient {
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

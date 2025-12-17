@@ -1,0 +1,113 @@
+/* Layout Styles - Scale AI Redesign */
+
+/* Header */
+.site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background-color: rgba(2, 2, 2, 0.7);
+    /* Trasparent dark */
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.header-container {
+    max-width: 1400px;
+    /* Wider container */
+    margin: 0 auto;
+    padding: 0 var(--spacing-lg);
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.logo {
+    font-weight: 700;
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    color: var(--color-primary);
+    letter-spacing: -0.01em;
+}
+
+.logo span {
+    color: var(--color-primary);
+    /* Monochrome logo */
+}
+
+.main-nav ul {
+    display: flex;
+    gap: var(--spacing-lg);
+    list-style: none;
+}
+
+.main-nav a {
+    font-weight: 500;
+    color: var(--color-text-dim);
+    font-size: 0.9rem;
+}
+
+.main-nav a:hover,
+.main-nav a.active {
+    color: var(--color-primary);
+}
+
+/* Footer */
+.site-footer {
+    background-color: var(--color-bg);
+    border-top: 1px solid var(--color-border);
+    padding: var(--spacing-2xl) 0 var(--spacing-xl);
+    margin-top: auto;
+}
+
+.footer-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-lg);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-xl);
+}
+
+.footer-section h3 {
+    color: var(--color-primary);
+    margin-bottom: var(--spacing-lg);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.footer-section p,
+.footer-section a {
+    color: var(--color-text-dim);
+    font-size: 0.9rem;
+    display: block;
+    margin-bottom: var(--spacing-sm);
+}
+
+.footer-section a:hover {
+    color: var(--color-primary);
+}
+
+.footer-bottom {
+    max-width: 1400px;
+    margin: var(--spacing-xl) auto 0;
+    padding: var(--spacing-lg) var(--spacing-lg) 0;
+    border-top: 1px solid var(--color-border);
+    text-align: center;
+    color: var(--color-text-dim);
+    font-size: 0.8rem;
+}
+
+/* Page Layout */
+.app-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
