@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Upload, X, Download, FileSpreadsheet, Trash2, Wand2, Type, Eraser, CheckCircle2, Info } from 'lucide-react';
+import { Upload, X, Download, FileSpreadsheet, Trash2, Wand2, Type, Eraser, CheckCircle2, Info, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { usePyodide } from '../hooks/usePyodide';
 
 interface DataRow {
     [key: string]: string | number | boolean | null;
@@ -11,7 +12,12 @@ export const DataCleaner: React.FC = () => {
     const [headers, setHeaders] = useState<string[]>([]);
     const [fileName, setFileName] = useState<string | null>(null);
     const [isDragging, setIsDragging] = useState(false);
-    const [notification, setNotification] = useState<{ message: string, type: 'success' | 'info' } | null>(null);
+    const [notification, setNotification] = useState<{ message: string, type: 'success' | 'info' | 'error' } | null>(null);
+    const [processing, setProcessing] = useState(false);
+
+    // Python Engine Hook - Removed unused isLoading
+    const { isReady: pythonReady, runPython } = usePyodide();
+
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Auto-dismiss notification
@@ -22,7 +28,7 @@ export const DataCleaner: React.FC = () => {
         }
     }, [notification]);
 
-    const showNotification = (message: string, type: 'success' | 'info' = 'success') => {
+    const showNotification = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
         setNotification({ message, type });
     };
 
@@ -96,77 +102,98 @@ export const DataCleaner: React.FC = () => {
         if (file) processFile(file);
     }, []);
 
-    const removeDuplicates = () => {
-        if (!data.length) return;
-        const seen = new Set();
-        const initialCount = data.length;
-        const uniqueData = data.filter(row => {
-            const serialized = JSON.stringify(headers.map(h => row[h]));
-            if (seen.has(serialized)) return false;
-            seen.add(serialized);
-            return true;
-        });
-        const removedCount = initialCount - uniqueData.length;
-        setData(uniqueData);
-        if (removedCount > 0) showNotification(`Removed ${removedCount} duplicate rows.`);
-        else showNotification("No duplicates found.", "info");
+    // --------------------------------------------------------
+    // PYTHON POWERED FUNCTIONS
+    // --------------------------------------------------------
+
+    const runDataOperation = async (operationName: string, pythonScript: string) => {
+        if (!pythonReady) {
+            showNotification("Python engine still loading...", "info");
+            return;
+        }
+
+        setProcessing(true);
+        try {
+            // 1. Pass current data to Python context
+            const resultJson = await runPython(`
+import pandas as pd
+import json
+import io
+
+# Load data from JS variable
+data_str = ${'dataset_json'} 
+df = pd.DataFrame(json.loads(data_str))
+
+# --- OPERATION START ---
+${pythonScript}
+# --- OPERATION END ---
+
+# Return result as JSON string list of records
+df.to_json(orient='records')
+            `, { dataset_json: data });
+
+            // 2. Parse result back to JS
+            const newData = JSON.parse(resultJson);
+            setData(newData);
+            showNotification(`${operationName} complete!`);
+
+        } catch (err) {
+            console.error("Python Error:", err);
+            showNotification(`Error in ${operationName}`, "error");
+        } finally {
+            setProcessing(false);
+        }
     };
 
     const deepClean = () => {
-        if (!data.length) return;
-        let changeCount = 0;
-        const cleanedData = data.map(row => {
-            const newRow: DataRow = {};
-            let hasChanged = false;
-            headers.forEach(key => {
-                const value = row[key];
-                if (typeof value === 'string') {
-                    const cleanValue = value.replace(/[\u00A0\s]+/g, ' ').trim();
-                    newRow[key] = cleanValue;
-                    if (cleanValue !== value) hasChanged = true;
-                } else {
-                    newRow[key] = value;
-                }
-            });
-            if (hasChanged) changeCount++;
-            return newRow;
-        });
-        setData(cleanedData);
-        if (changeCount > 0) showNotification(`Deep cleaned ${changeCount} rows.`);
-        else showNotification("Data is already clean.", "info");
+        // Pandas magic: strip whitespace from all string columns, remove duplicates, etc.
+        const script = `
+# Deep Clean with Pandas
+# 1. Strip whitespace from all object (string) columns
+df = df.apply(lambda x: x.str.strip() if x.dtype == "object" else x)
+
+# 2. Replace multiple spaces with single space in regex
+df = df.replace(r'\\s+', ' ', regex=True)
+
+# 3. Replace empty strings with NaN temporarily to drop truly empty rows if desired (optional)
+# For now just standardizing empty strings
+df = df.fillna("")
+        `;
+        runDataOperation("Deep Clean (Python)", script);
+    };
+
+    const removeDuplicates = () => {
+        const script = `
+count_before = len(df)
+df = df.drop_duplicates()
+count_after = len(df)
+# We can't easily return the count separately without changing the return structure, 
+# but the operation is done efficiently.
+         `;
+        runDataOperation("Deduplication (Python)", script);
     };
 
     const removeEmptyRows = () => {
-        if (!data.length) return;
-        const initialCount = data.length;
-        const nonEmptyData = data.filter(row => {
-            return headers.some(key => {
-                const val = row[key];
-                return val !== null && val !== undefined && String(val).trim() !== "";
-            });
-        });
-        const removedCount = initialCount - nonEmptyData.length;
-        setData(nonEmptyData);
-        if (removedCount > 0) showNotification(`Removed ${removedCount} empty rows.`);
-        else showNotification("No empty rows found.", "info");
+        const script = `
+# Convert empty strings to NaN to properly detect "empty"
+df = df.replace(r'^\\s*$', float('nan'), regex=True)
+# Drop rows where ALL elements are NaN
+df = df.dropna(how='all')
+# Fill remaining NaNs back to empty string for UI safety
+df = df.fillna("")
+        `;
+        runDataOperation("Remove Empty Rows (Python)", script);
     };
 
     const standardizeCase = () => {
-        if (!data.length) return;
-        const toTitleCase = (str: string) => {
-            return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
-        };
-        const standardizedData = data.map(row => {
-            const newRow: DataRow = {};
-            headers.forEach(key => {
-                const value = row[key];
-                newRow[key] = typeof value === 'string' ? toTitleCase(value) : value;
-            });
-            return newRow;
-        });
-        setData(standardizedData);
-        showNotification("Standardized text case (Title Case).");
+        const script = `
+# Title Case for all string columns
+for col in df.select_dtypes(include=['object']).columns:
+    df[col] = df[col].astype(str).str.title()
+        `;
+        runDataOperation("Standardize Case (Python)", script);
     };
+
 
     const downloadFile = () => {
         try {
@@ -207,9 +234,12 @@ export const DataCleaner: React.FC = () => {
             {/* Notification Toast */}
             {notification && (
                 <div className="fixed bottom-8 right-8 z-50 animate-in slide-in-from-bottom-5 duration-300">
-                    <div className="px-4 py-3 bg-[#18181b] border border-[#27272a] rounded-lg shadow-2xl flex items-center gap-3">
+                    <div className={`px-4 py-3 border rounded-lg shadow-2xl flex items-center gap-3 ${notification.type === 'error' ? 'bg-red-950/80 border-red-800' : 'bg-[#18181b] border-[#27272a]'
+                        }`}>
                         {notification.type === 'success' ? (
                             <CheckCircle2 className="w-5 h-5 text-green-500" />
+                        ) : notification.type === 'error' ? (
+                            <X className="w-5 h-5 text-red-500" />
                         ) : (
                             <Info className="w-5 h-5 text-blue-500" />
                         )}
@@ -225,10 +255,15 @@ export const DataCleaner: React.FC = () => {
                     <h1 className="text-5xl font-bold tracking-tight bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">
                         Data Refinery
                     </h1>
-                    <p className="text-[#a1a1aa] text-lg max-w-xl mx-auto font-light">
-                        Professional data cleaning for modern teams. <br />
-                        <span className="opacity-60">Upload, refine, and export in seconds.</span>
-                    </p>
+                    <div className="flex items-center justify-center gap-2 text-[#a1a1aa] text-lg font-light">
+                        <span>Professional data cleaning with</span>
+                        <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-xs font-mono transition-colors ${pythonReady
+                                ? 'border-green-800 bg-green-950/30 text-green-400'
+                                : 'border-yellow-800 bg-yellow-950/30 text-yellow-500 animate-pulse'
+                            }`}>
+                            {pythonReady ? 'PYTHON READY' : 'LOADING ENGINE...'}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Main Action Area */}
@@ -271,10 +306,10 @@ export const DataCleaner: React.FC = () => {
                             <div className="h-8 w-px bg-[#3f3f46]"></div>
 
                             <div className="flex items-center gap-1">
-                                <ActionButton icon={Trash2} label="Dedupe" onClick={removeDuplicates} />
-                                <ActionButton icon={Eraser} label="No Empty" onClick={removeEmptyRows} />
-                                <ActionButton icon={Wand2} label="Deep Clean" onClick={deepClean} />
-                                <ActionButton icon={Type} label="Title Case" onClick={standardizeCase} />
+                                <ActionButton icon={Trash2} label="Dedupe" onClick={removeDuplicates} disabled={!pythonReady || processing} />
+                                <ActionButton icon={Eraser} label="No Empty" onClick={removeEmptyRows} disabled={!pythonReady || processing} />
+                                <ActionButton icon={Wand2} label="Deep Clean" onClick={deepClean} disabled={!pythonReady || processing} />
+                                <ActionButton icon={Type} label="Title Case" onClick={standardizeCase} disabled={!pythonReady || processing} />
                             </div>
 
                             <div className="h-8 w-px bg-[#3f3f46]"></div>
@@ -296,6 +331,16 @@ export const DataCleaner: React.FC = () => {
                                 </button>
                             </div>
                         </div>
+
+                        {/* Processing Overlay */}
+                        {processing && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                                <div className="bg-[#18181b] border border-[#27272a] p-8 rounded-2xl flex flex-col items-center gap-4 shadow-2xl">
+                                    <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+                                    <p className="text-lg font-medium text-white">Running Python Script...</p>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Data Grid */}
                         <div className="w-full border border-[#27272a] rounded-xl overflow-hidden bg-[#09090b] shadow-sm">
@@ -337,10 +382,14 @@ export const DataCleaner: React.FC = () => {
 };
 
 // Subcomponent for cleaner JSX
-const ActionButton: React.FC<{ icon: any, label: string, onClick: () => void }> = ({ icon: Icon, label, onClick }) => (
+const ActionButton: React.FC<{ icon: any, label: string, onClick: () => void, disabled?: boolean }> = ({ icon: Icon, label, onClick, disabled }) => (
     <button
         onClick={onClick}
-        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[#a1a1aa] hover:text-white hover:bg-[#27272a] rounded-lg transition-all"
+        disabled={disabled}
+        className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all ${disabled
+                ? 'text-[#3f3f46] cursor-not-allowed'
+                : 'text-[#a1a1aa] hover:text-white hover:bg-[#27272a]'
+            }`}
     >
         <Icon className="w-4 h-4" />
         {label}
