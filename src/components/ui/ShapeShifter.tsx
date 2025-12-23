@@ -15,18 +15,15 @@ function MorphingShape() {
     // but let's try the prop animation.
 
     const [segments, setSegments] = useState(32);
-    const targetSegments = useRef(3); // Start morphing to triangle
 
-    useFrame((state) => {
+    useFrame((_) => {
         if (meshRef.current) {
             meshRef.current.rotation.x += 0.01;
             meshRef.current.rotation.y += 0.02;
 
             // Automatic oscillation between 3 and 32
-            const time = state.clock.getElapsedTime();
-            // Use a stepped function to hold the shape for a bit
-            const phase = Math.sin(time * 0.5); // Slow oscillation
 
+            // Use a stepped function to hold the shape for a bit
             // If phase > 0, be a triangle (3). If < 0, be a cylinder (32)
             // We want a transition.
             // Actually, animating radialSegments frame-by-frame is performance heavy (new geometry every frame).
