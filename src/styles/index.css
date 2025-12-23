@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   /* Scale AI Inspired Colors */
   --color-bg: #020202;

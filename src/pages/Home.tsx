@@ -1,6 +1,7 @@
 import { ArrowRight, Shield, Zap, Database, Layers } from 'lucide-react';
 import '../styles/index.css';
 import { ShapeShifter } from '../components/ui/ShapeShifter';
+import { DataCleaner } from '../components/DataCleaner';
 
 export function Home() {
     return (
@@ -11,7 +12,7 @@ export function Home() {
                 position: 'absolute',
                 inset: 0,
                 backgroundImage: `
-          linear-gradient(to right, #1a1a1a 1px, transparent 1px),
+          linear-gradient(to right, #504c4cff 1px, transparent 1px),
           linear-gradient(to bottom, #8b8b8bff 1px, transparent 1px)
         `,
                 backgroundSize: '40px 40px',
@@ -95,7 +96,12 @@ export function Home() {
                         </button>
                     </div>
                 </div>
-            </section>
+
+
+                <div className="mt-24 px-4 pb-20 container mx-auto bg">
+                    <DataCleaner />
+                </div>
+            </section >
 
             {/* Feature Grid (Bento Box Style) */}
             <section style={{ padding: 'var(--spacing-xl) 20px', borderTop: '1px solid var(--color-border)' }}>
@@ -131,8 +137,8 @@ export function Home() {
                         />
                     </div>
                 </div>
-            </section>
-        </div>
+            </section >
+        </div >
     );
 }
 
