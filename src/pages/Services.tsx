@@ -1,9 +1,11 @@
 import { Database, Filter, Layers, Search } from 'lucide-react';
 import '../styles/index.css';
+import { SEO } from '../components/SEO';
 
 export function Services() {
     return (
         <div style={{ padding: 'var(--spacing-2xl) var(--spacing-lg)', maxWidth: '1200px', margin: '0 auto' }}>
+            <SEO title="Servicios" description="Limpieza de CRM, Deduplicación y Estandarización de datos." />
             <div style={{ textAlign: 'center', marginBottom: 'var(--spacing-2xl)' }}>
                 <h1 style={{ fontSize: '3rem', marginBottom: 'var(--spacing-md)' }}>Nuestros Servicios</h1>
                 <p style={{ color: 'var(--color-text-dim)', maxWidth: '600px', margin: '0 auto', fontSize: '1.2rem' }}>

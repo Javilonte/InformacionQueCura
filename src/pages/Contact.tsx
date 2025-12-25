@@ -1,6 +1,7 @@
 import { Mail, MapPin, Phone, Send } from 'lucide-react';
 import { useState } from 'react';
 import '../styles/index.css';
+import { SEO } from '../components/SEO';
 
 export function Contact() {
     const [formData, setFormData] = useState({ name: '', email: '', message: '' });
@@ -13,6 +14,7 @@ export function Contact() {
 
     return (
         <div style={{ padding: 'var(--spacing-2xl) var(--spacing-lg)', maxWidth: '1000px', margin: '0 auto' }}>
+            <SEO title="Contacto" description="Contáctanos para transformar tus datos." />
             <div style={{ textAlign: 'center', marginBottom: 'var(--spacing-2xl)' }}>
                 <h1 style={{ fontSize: '3rem', marginBottom: 'var(--spacing-md)' }}>Contáctanos</h1>
                 <p style={{ color: 'var(--color-text-dim)', fontSize: '1.2rem' }}>Inicia tu transformación de datos hoy.</p>

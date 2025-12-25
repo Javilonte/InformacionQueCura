@@ -15,8 +15,14 @@ export const DataCleaner: React.FC = () => {
     const [notification, setNotification] = useState<{ message: string, type: 'success' | 'info' | 'error' } | null>(null);
     const [processing, setProcessing] = useState(false);
 
-    // Python Engine Hook - Removed unused isLoading
-    const { isReady: pythonReady, runPython } = usePyodide();
+    // Python Engine Hook
+    const { isReady: pythonReady, runPython, init: initPython, isLoading: pythonLoading } = usePyodide();
+    const [engineStarted, setEngineStarted] = useState(false);
+
+    const handleStartEngine = () => {
+        setEngineStarted(true);
+        initPython();
+    };
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -31,6 +37,23 @@ export const DataCleaner: React.FC = () => {
     const showNotification = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
         setNotification({ message, type });
     };
+
+    // ... (sanitizeHeaders and processFile functions remain same, omitted for brevity if unchanged logic, but keeping them if needed)
+    // To ensure I don't delete them, I will target the specific blocks or keep the surrounding code.
+    // Since this tool replaces a block, I should stick to the header/init part and the render part.
+
+    // ... sanitizeHeaders ... processFile ... handleFileUpload ... drag handlers ...
+
+    // I will replace the top part first to get the init logic in.
+
+    // Actually, I can replace the logic and then the render.
+    // Let's replace the top hook call first.
+
+    // Splitting this into multiple ReplaceFileContent calls might be safer if the file is large.
+    // But I can try to match the return block for the "Start" UI.
+
+    // Let's start with the Hook destructuring.
+
 
     const sanitizeHeaders = (rawHeaders: string[]): string[] => {
         const seen: { [key: string]: number } = {};
@@ -258,123 +281,157 @@ for col in df.select_dtypes(include=['object']).columns:
                     <div className="flex items-center justify-center gap-2 text-[#a1a1aa] text-lg font-light">
                         <span>Professional data cleaning with</span>
                         <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-xs font-mono transition-colors ${pythonReady
-                                ? 'border-green-800 bg-green-950/30 text-green-400'
-                                : 'border-yellow-800 bg-yellow-950/30 text-yellow-500 animate-pulse'
+                            ? 'border-green-800 bg-green-950/30 text-green-400'
+                            : 'border-yellow-800 bg-yellow-950/30 text-yellow-500'
                             }`}>
-                            {pythonReady ? 'PYTHON READY' : 'LOADING ENGINE...'}
+                            {pythonReady ? 'PYTHON READY' : 'PANDAS ENGINE'}
                         </div>
                     </div>
                 </div>
 
-                {/* Main Action Area */}
-                {data.length === 0 ? (
-                    <div
-                        className={`
-                            group w-full max-w-2xl border border-dashed rounded-xl p-16 text-center transition-all duration-300 cursor-pointer
-                            ${isDragging
-                                ? 'border-blue-500 bg-blue-500/5 scale-[1.01]'
-                                : 'border-[#3f3f46] hover:border-[#71717a] hover:bg-[#27272a]/30'
-                            }
-                        `}
-                        onClick={() => fileInputRef.current?.click()}
-                        onDragOver={onDragOver}
-                        onDragLeave={onDragLeave}
-                        onDrop={onDrop}
-                    >
-                        <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept=".xlsx, .xls, .csv" />
-
-                        <div className="w-16 h-16 bg-[#18181b] rounded-2xl border border-[#27272a] flex items-center justify-center mx-auto mb-6 shadow-sm group-hover:scale-110 transition-transform duration-300">
-                            <Upload className="w-6 h-6 text-[#a1a1aa] group-hover:text-white transition-colors" />
+                {/* Engine Starter Overlay */}
+                {!engineStarted ? (
+                    <div className="w-full max-w-lg text-center space-y-8 animate-in fade-in zoom-in duration-500">
+                        <div className="p-8 border border-[#27272a] bg-[#18181b]/50 rounded-2xl backdrop-blur-sm">
+                            <Wand2 className="w-12 h-12 text-blue-500 mx-auto mb-6" />
+                            <h2 className="text-2xl font-semibold text-white mb-4">Initialize Python Engine</h2>
+                            <p className="text-[#a1a1aa] mb-8">
+                                To protect your bandwidth, we load the powerful Pandas data engine (~20MB) only when you need it.
+                                All data processing happens locally in your browser.
+                            </p>
+                            <button
+                                onClick={handleStartEngine}
+                                className="px-8 py-3 bg-white text-black font-semibold rounded-lg hover:bg-gray-200 transition-all flex items-center justify-center gap-2 mx-auto w-full"
+                            >
+                                <Loader2 className={`w-5 h-5 ${pythonLoading ? 'animate-spin' : 'hidden'}`} />
+                                {pythonLoading ? 'Initializing...' : 'Start Engine'}
+                            </button>
                         </div>
-                        <h3 className="text-xl font-medium text-white mb-2">Upload Data File</h3>
-                        <p className="text-[#a1a1aa] text-sm">Drag & drop excel or csv</p>
+                        <p className="text-xs text-[#52525b]">Powered by Pyodide WebAssembly</p>
                     </div>
                 ) : (
-                    <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        {/* Command Bar */}
-                        <div className="sticky top-6 z-40 w-full glass-panel rounded-xl p-2 flex items-center justify-between shadow-xl">
-                            <div className="flex items-center gap-4 px-4">
-                                <div className="w-10 h-10 bg-[#27272a] rounded-lg flex items-center justify-center">
-                                    <FileSpreadsheet className="w-5 h-5 text-[#fafafa]" />
-                                </div>
-                                <div>
-                                    <h3 className="font-medium text-sm text-white max-w-[200px] truncate" title={fileName || 'File'}>{fileName}</h3>
-                                    <p className="text-xs text-[#a1a1aa] font-mono">{data.length} rows • {headers.length} cols</p>
-                                </div>
-                            </div>
-
-                            <div className="h-8 w-px bg-[#3f3f46]"></div>
-
-                            <div className="flex items-center gap-1">
-                                <ActionButton icon={Trash2} label="Dedupe" onClick={removeDuplicates} disabled={!pythonReady || processing} />
-                                <ActionButton icon={Eraser} label="No Empty" onClick={removeEmptyRows} disabled={!pythonReady || processing} />
-                                <ActionButton icon={Wand2} label="Deep Clean" onClick={deepClean} disabled={!pythonReady || processing} />
-                                <ActionButton icon={Type} label="Title Case" onClick={standardizeCase} disabled={!pythonReady || processing} />
-                            </div>
-
-                            <div className="h-8 w-px bg-[#3f3f46]"></div>
-
-                            <div className="flex items-center gap-2 px-2">
-                                <button
-                                    onClick={downloadFile}
-                                    className="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
-                                >
-                                    <Download className="w-4 h-4" />
-                                    Export
-                                </button>
-                                <button
-                                    onClick={() => setData([])}
-                                    className="p-2 hover:bg-[#27272a] rounded-lg text-[#a1a1aa] hover:text-red-400 transition-colors"
-                                    title="Close File"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Processing Overlay */}
-                        {processing && (
-                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                                <div className="bg-[#18181b] border border-[#27272a] p-8 rounded-2xl flex flex-col items-center gap-4 shadow-2xl">
-                                    <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
-                                    <p className="text-lg font-medium text-white">Running Python Script...</p>
-                                </div>
+                    <>
+                        {/* Loading State during Init */}
+                        {!pythonReady && (
+                            <div className="w-full max-w-lg p-8 border border-[#27272a] bg-[#18181b]/50 rounded-2xl backdrop-blur-sm text-center animate-pulse">
+                                <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4" />
+                                <h3 className="text-xl font-medium text-white mb-2">Loading Pandas Resources...</h3>
+                                <p className="text-[#a1a1aa] text-sm">This typically takes 5-10 seconds on the first run.</p>
                             </div>
                         )}
 
-                        {/* Data Grid */}
-                        <div className="w-full border border-[#27272a] rounded-xl overflow-hidden bg-[#09090b] shadow-sm">
-                            <div className="w-full overflow-x-auto">
-                                <table className="w-full text-left text-sm whitespace-nowrap border-collapse">
-                                    <thead>
-                                        <tr className="border-b border-[#27272a] bg-[#18181b]">
-                                            <th className="p-4 w-16 text-center text-[#52525b] font-medium text-xs uppercase tracking-wider sticky left-0 bg-[#18181b] z-10 border-r border-[#27272a]">#</th>
-                                            {headers.map((header, i) => (
-                                                <th key={i} className="p-4 font-medium text-[#a1a1aa] text-xs uppercase tracking-wider border-r border-[#27272a] last:border-r-0 min-w-[150px]">
-                                                    {header}
-                                                </th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-[#27272a]">
-                                        {data.slice(0, 100).map((row, i) => (
-                                            <tr key={i} className="group hover:bg-[#18181b] transition-colors">
-                                                <td className="p-3 text-center text-[#52525b] font-mono text-xs border-r border-[#27272a] bg-[#09090b] group-hover:bg-[#18181b] sticky left-0 z-10">{i + 1}</td>
-                                                {headers.map((header, j) => (
-                                                    <td key={j} className="p-3 text-[#e4e4e7] border-r border-[#27272a] last:border-r-0 max-w-[300px] truncate font-mono text-xs opacity-90">
-                                                        {String(row[header] !== null && row[header] !== undefined ? row[header] : '')}
-                                                    </td>
-                                                ))}
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div className="p-3 border-t border-[#27272a] bg-[#18181b] text-center text-xs text-[#71717a]">
-                                Only showing first 100 rows preview
-                            </div>
-                        </div>
-                    </div>
+                        {/* Main Action Area */}
+                        {pythonReady && (
+                            data.length === 0 ? (
+                                <div
+                                    className={`
+                            group w-full max-w-2xl border border-dashed rounded-xl p-16 text-center transition-all duration-300 cursor-pointer
+                            ${isDragging
+                                            ? 'border-blue-500 bg-blue-500/5 scale-[1.01]'
+                                            : 'border-[#3f3f46] hover:border-[#71717a] hover:bg-[#27272a]/30'
+                                        }
+                        `}
+                                    onClick={() => fileInputRef.current?.click()}
+                                    onDragOver={onDragOver}
+                                    onDragLeave={onDragLeave}
+                                    onDrop={onDrop}
+                                >
+                                    <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept=".xlsx, .xls, .csv" />
+
+                                    <div className="w-16 h-16 bg-[#18181b] rounded-2xl border border-[#27272a] flex items-center justify-center mx-auto mb-6 shadow-sm group-hover:scale-110 transition-transform duration-300">
+                                        <Upload className="w-6 h-6 text-[#a1a1aa] group-hover:text-white transition-colors" />
+                                    </div>
+                                    <h3 className="text-xl font-medium text-white mb-2">Upload Data File</h3>
+                                    <p className="text-[#a1a1aa] text-sm">Drag & drop excel or csv</p>
+                                </div>
+                            ) : (
+                                <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                    {/* Command Bar */}
+                                    <div className="sticky top-6 z-40 w-full glass-panel rounded-xl p-2 flex items-center justify-between shadow-xl">
+                                        <div className="flex items-center gap-4 px-4">
+                                            <div className="w-10 h-10 bg-[#27272a] rounded-lg flex items-center justify-center">
+                                                <FileSpreadsheet className="w-5 h-5 text-[#fafafa]" />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-medium text-sm text-white max-w-[200px] truncate" title={fileName || 'File'}>{fileName}</h3>
+                                                <p className="text-xs text-[#a1a1aa] font-mono">{data.length} rows • {headers.length} cols</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="h-8 w-px bg-[#3f3f46]"></div>
+
+                                        <div className="flex items-center gap-1">
+                                            <ActionButton icon={Trash2} label="Dedupe" onClick={removeDuplicates} disabled={!pythonReady || processing} />
+                                            <ActionButton icon={Eraser} label="No Empty" onClick={removeEmptyRows} disabled={!pythonReady || processing} />
+                                            <ActionButton icon={Wand2} label="Deep Clean" onClick={deepClean} disabled={!pythonReady || processing} />
+                                            <ActionButton icon={Type} label="Title Case" onClick={standardizeCase} disabled={!pythonReady || processing} />
+                                        </div>
+
+                                        <div className="h-8 w-px bg-[#3f3f46]"></div>
+
+                                        <div className="flex items-center gap-2 px-2">
+                                            <button
+                                                onClick={downloadFile}
+                                                className="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
+                                            >
+                                                <Download className="w-4 h-4" />
+                                                Export
+                                            </button>
+                                            <button
+                                                onClick={() => setData([])}
+                                                className="p-2 hover:bg-[#27272a] rounded-lg text-[#a1a1aa] hover:text-red-400 transition-colors"
+                                                title="Close File"
+                                            >
+                                                <X className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Processing Overlay */}
+                                    {processing && (
+                                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                                            <div className="bg-[#18181b] border border-[#27272a] p-8 rounded-2xl flex flex-col items-center gap-4 shadow-2xl">
+                                                <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+                                                <p className="text-lg font-medium text-white">Running Python Script...</p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Data Grid */}
+                                    <div className="w-full border border-[#27272a] rounded-xl overflow-hidden bg-[#09090b] shadow-sm">
+                                        <div className="w-full overflow-x-auto">
+                                            <table className="w-full text-left text-sm whitespace-nowrap border-collapse">
+                                                <thead>
+                                                    <tr className="border-b border-[#27272a] bg-[#18181b]">
+                                                        <th className="p-4 w-16 text-center text-[#52525b] font-medium text-xs uppercase tracking-wider sticky left-0 bg-[#18181b] z-10 border-r border-[#27272a]">#</th>
+                                                        {headers.map((header, i) => (
+                                                            <th key={i} className="p-4 font-medium text-[#a1a1aa] text-xs uppercase tracking-wider border-r border-[#27272a] last:border-r-0 min-w-[150px]">
+                                                                {header}
+                                                            </th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-[#27272a]">
+                                                    {data.slice(0, 100).map((row, i) => (
+                                                        <tr key={i} className="group hover:bg-[#18181b] transition-colors">
+                                                            <td className="p-3 text-center text-[#52525b] font-mono text-xs border-r border-[#27272a] bg-[#09090b] group-hover:bg-[#18181b] sticky left-0 z-10">{i + 1}</td>
+                                                            {headers.map((header, j) => (
+                                                                <td key={j} className="p-3 text-[#e4e4e7] border-r border-[#27272a] last:border-r-0 max-w-[300px] truncate font-mono text-xs opacity-90">
+                                                                    {String(row[header] !== null && row[header] !== undefined ? row[header] : '')}
+                                                                </td>
+                                                            ))}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div className="p-3 border-t border-[#27272a] bg-[#18181b] text-center text-xs text-[#71717a]">
+                                            Only showing first 100 rows preview
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                    </>
                 )}
             </main>
         </div>
@@ -387,8 +444,8 @@ const ActionButton: React.FC<{ icon: any, label: string, onClick: () => void, di
         onClick={onClick}
         disabled={disabled}
         className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all ${disabled
-                ? 'text-[#3f3f46] cursor-not-allowed'
-                : 'text-[#a1a1aa] hover:text-white hover:bg-[#27272a]'
+            ? 'text-[#3f3f46] cursor-not-allowed'
+            : 'text-[#a1a1aa] hover:text-white hover:bg-[#27272a]'
             }`}
     >
         <Icon className="w-4 h-4" />

@@ -1,13 +1,20 @@
 import { ArrowRight, Shield, Zap, Database, Layers } from 'lucide-react';
 import '../styles/index.css';
 import { ShapeShifter } from '../components/ui/ShapeShifter';
-import { DataCleaner } from '../components/DataCleaner';
+import { SEO } from '../components/SEO';
+import { lazy, Suspense } from 'react';
+
+const DataCleaner = lazy(() => import('../components/DataCleaner').then(module => ({ default: module.DataCleaner })));
 
 export function Home() {
     return (
         <div className="home-page" style={{ position: 'relative', overflow: 'hidden' }}>
 
             {/* Background Grid Effect */}
+            <SEO
+                title="Inicio"
+                description="InformacionQueCura - Transformamos tus datos en activos de inteligencia empresarial. Limpieza, estandarización y enriquecimiento de datos."
+            />
             <div style={{
                 position: 'absolute',
                 inset: 0,
@@ -99,7 +106,9 @@ export function Home() {
 
 
                 <div className="mt-24 px-4 pb-20 container mx-auto bg">
-                    <DataCleaner />
+                    <Suspense fallback={<div style={{ textAlign: 'center', padding: '20px' }}>Cargando Motor de Limpieza...</div>}>
+                        <DataCleaner />
+                    </Suspense>
                 </div>
             </section >
 
